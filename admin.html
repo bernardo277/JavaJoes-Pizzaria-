@@ -276,6 +276,29 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
+  // ===== AUTH (LOGIN) =====
+
+const PASS = "gestaojava"; // coloque aqui a senha que você quer
+
+window.dologin = function () {
+  var p = $("passInput");
+  if (!p) return;
+
+  if (p.value === PASS) {
+    localStorage.setItem("jj_admin_auth", "true");
+    startDash();
+  } else {
+    var err = $("loginErr");
+    if (err) err.style.display = "block";
+    p.value = "";
+    p.focus();
+  }
+}
+
+window.doLogout = function () {
+  localStorage.removeItem("jj_admin_auth");
+  location.reload();
+}
 
 // ========= BUSCAR RESERVAS DO BANCO =========
 async function getAll() {
