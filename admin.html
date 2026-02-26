@@ -267,81 +267,83 @@ function html(id, h) { var e = $(id); if (e) e.innerHTML = h; }
 
 // ── Data ──
 
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBQ_s13c4Y0p";
+  // ===== Supabase =====
+  const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBQ_s13c4Y0p";
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
-// ===== AUTH (LOGIN) =====
-
-// senha do admin (pode trocar)
-window.ADMIN_PASS = window.ADMIN_PASS || "gestaojava";
-
-// garante que não vai “quebrar” se o script rodar 2x
-window.doLogin = window.doLogin || function () {
-  var p = document.getElementById("passInput");
-  if (!p) return;
-
-  if (p.value === window.ADMIN_PASS) {
-    localStorage.setItem("jj_admin_auth", "true");
-    if (typeof startDash === "function") startDash();
-  } else {
-    var err = document.getElementById("loginErr");
-    if (err) err.style.display = "block";
-    p.value = "";
-    p.focus();
-  }
-};
-
-window.doLogout = window.doLogout || function () {
-  localStorage.removeItem("jj_admin_auth");
-  location.reload();
-};
-
-// ========= BUSCAR RESERVAS DO BANCO =========
-async function getAll() {
-  const { data, error } = await supabaseClient
-    .from("reservas")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Erro ao buscar reservas:", error.message);
-    return [];
+  function getSupabaseClient() {
+    if (!window.supabase || !window.supabase.createClient) {
+      console.error("Supabase não carregou. Verifique o <script src=...supabase-js@2>.");
+      return null;
+    }
+    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 
-  return data || [];
-}
+  // ===== AUTH (LOGIN) =====
+  window.ADMIN_PASS = "gestaojava";
 
-// ========= MANTIDO SÓ PRA NÃO QUEBRAR CÓDIGO ANTIGO =========
-async function saveAll(a) {
-  return true;
-}
+  window.doLogin = function () {
+    const p = document.getElementById("passInput");
+    const err = document.getElementById("loginErr");
+    if (err) err.style.display = "none";
 
-// ========= UTILIDADES =========
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
+    if (!p) return;
 
-function esc(s) {
-  var d = document.createElement("div");
-  d.textContent = s || "";
-  return d.innerHTML;
-}
+    if (p.value === window.ADMIN_PASS) {
+      localStorage.setItem("jj_admin_auth", "true");
+      if (typeof startDash === "function") startDash();
+    } else {
+      if (err) err.style.display = "block";
+      p.value = "";
+      p.focus();
+    }
+  };
 
-function fmtDate(ds) {
-  var d = new Date(ds + "T12:00:00");
-  var names = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-  return names[d.getDay()] + " • " +
-    String(d.getDate()).padStart(2,"0") + "/" +
-    String(d.getMonth()+1).padStart(2,"0");
-}
+  window.doLogout = function () {
+    localStorage.removeItem("jj_admin_auth");
+    location.reload();
+  };
+
+  // ===== BUSCAR RESERVAS DO BANCO =====
+  async function getAll() {
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) return [];
+
+    const { data, error } = await supabaseClient
+      .from("reservas")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Erro ao buscar reservas:", error.message);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  // ===== MANTIDO SÓ PRA NÃO QUEBRAR =====
+  async function saveAll(a) { return true; }
+
+  // ===== UTILIDADES =====
+  function todayStr() { return new Date().toISOString().split("T")[0]; }
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s || "";
+    return d.innerHTML;
+  }
+
+  function fmtDate(ds) {
+    var d = new Date(ds + "T12:00:00");
+    var names = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+    return names[d.getDay()] + " • " +
+      String(d.getDate()).padStart(2,"0") + "/" +
+      String(d.getMonth()+1).padStart(2,"0");
+  }
 </script>
-}
 
 function waLink(msg) {
   return "https://wa.me/" + WA_NUM + "?text=" + encodeURIComponent(msg);
