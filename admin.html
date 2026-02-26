@@ -266,15 +266,56 @@ function text(id, t) { var e = $(id); if (e) e.textContent = t; }
 function html(id, h) { var e = $(id); if (e) e.innerHTML = h; }
 
 // ── Data ──
-function getAll() { try { return JSON.parse(localStorage.getItem("jj_reservations") || "[]"); } catch(e) { return []; } }
-function saveAll(a) { localStorage.setItem("jj_reservations", JSON.stringify(a)); }
-function todayStr() { return new Date().toISOString().split("T")[0]; }
-function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBQ_s13c4Y0p";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+// ========= BUSCAR RESERVAS DO BANCO =========
+async function getAll() {
+  const { data, error } = await supabaseClient
+    .from("reservas")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Erro ao buscar reservas:", error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+// ========= MANTIDO SÓ PRA NÃO QUEBRAR CÓDIGO ANTIGO =========
+async function saveAll(a) {
+  return true;
+}
+
+// ========= UTILIDADES =========
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function esc(s) {
+  var d = document.createElement("div");
+  d.textContent = s || "";
+  return d.innerHTML;
+}
 
 function fmtDate(ds) {
   var d = new Date(ds + "T12:00:00");
-  var names = ["Dom","Seg","Ter","Qua","Qui","Sex","S\u00e1b"];
-  return names[d.getDay()] + " " + String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
+  var names = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  return names[d.getDay()] + " • " +
+    String(d.getDate()).padStart(2,"0") + "/" +
+    String(d.getMonth()+1).padStart(2,"0");
+}
+</script>
 }
 
 function waLink(msg) {
@@ -368,10 +409,43 @@ window.setMode = function(m) {
 // ══════════════════════════
 // RENDER
 // ══════════════════════════
-function render() {
-  var all = autoExpire(getAll());
+async function render() {
+
+  var all = autoExpire(await getAll());
+
   var la = $("listArea");
   if (!la) return;
+
+  if (mode === "today") {
+    var di = $("dateInput");
+    var date = di ? di.value : todayStr();
+    var dayRes = all.filter(function(r) { return r.date === date; });
+
+    renderStats(dayRes);
+    renderAlert(all);
+    sortRes(dayRes);
+
+    if (!dayRes.length) {
+      la.innerHTML = '<div class="empty"><span>Sem reservas</span></div>';
+    } else {
+      la.innerHTML = '<div class="sec-title">Reservas do Dia</div>';
+    }
+
+  } else {
+
+    var days = getWeekDays(), allW = [];
+    var out = '<div class="sec-title">Reservas da Semana</div>';
+
+    for (var i = 0; i < days.length; i++) {
+      var day = days[i];
+      var dr = all.filter(function(r) { return r.date === day; });
+      sortRes(dr);
+      allW = allW.concat(dr);
+    }
+
+    la.innerHTML = out;
+  }
+}
 
   if (mode === "today") {
     var di = $("dateInput");
