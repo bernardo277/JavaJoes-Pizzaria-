@@ -383,12 +383,19 @@ window.confirmarReserva = function() {
       waBtn.href = "https://wa.me/5521974577675?text=" + encodeURIComponent(msg);
     }
 
-    // ── SHOW MODAL ──
-    modal.classList.add("on");
-    document.body.style.overflow = "hidden";
-    console.log("Modal aberto \u2705");
-  }, 800);
-};
+   // — SHOW MODAL —
+setTimeout(() => {
+  modal.classList.add("on");
+  document.body.style.overflow = "hidden";
+  console.log("Modal aberto ✅");
+
+  // fecha sozinho depois de 3s
+  setTimeout(() => {
+    modal.classList.remove("on");
+    document.body.style.overflow = "";
+  }, 3000);
+
+}, 800);
 
 // ── MODAL OK BUTTON ──
 window.fecharModal = function() {
@@ -436,3 +443,4 @@ console.log("\u2705 Script carregado. window.confirmarReserva =", typeof window.
 </script>
 </body>
 </html>
+
