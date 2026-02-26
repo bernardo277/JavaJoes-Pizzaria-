@@ -181,7 +181,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.6) sepia(1)
     <h2>Java Joe's Pizzaria e Bistrô</h2>
     <p>Painel Administrativo</p>
     <input type="password" class="login-input" id="passInput" placeholder="Senha de acesso" autocomplete="off"/>
-    <button type="button" class="login-btn" onclick="doLogin()">Entrar</button>
+  <button type="button" class="login-btn" onclick="window.doLogin()">Entrar</button>
     <div class="login-err" id="loginErr">Senha incorreta.</div>
   </div>
 </div>
@@ -240,7 +240,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.6) sepia(1)
    All functions global. All DOM access null-safe.
    ══════════════════════════════════════════════ */
 
-var PASS = "gestaojava";
+window.ADMIN_PASS = window.ADMIN_PASS || "gestaojava";
 var LIMIT = 100;
 var WA_NUM = "5521974577675";
 var mode = "today";
@@ -266,8 +266,8 @@ function text(id, t) { var e = $(id); if (e) e.textContent = t; }
 function html(id, h) { var e = $(id); if (e) e.innerHTML = h; }
 
 // ── Data ──
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script 
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBQ_s13c4Y0p";
