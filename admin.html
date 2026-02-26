@@ -269,80 +269,207 @@ function html(id, h) { var e = $(id); if (e) e.innerHTML = h; }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ===== Supabase =====
-  const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBQ_s13c4Y0p";
+    const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBQ_s13c4Y0p";
 
-  function getSupabaseClient() {
-    if (!window.supabase || !window.supabase.createClient) {
-      console.error("Supabase não carregou. Verifique o <script src=...supabase-js@2>.");
-      return null;
-    }
-    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
+    let supabaseClient = null;
+    let reservations = [];
+    let currentFilter = 'todas';
+    let autoRefreshInterval = null;
 
-  // ===== AUTH (LOGIN) =====
-  window.ADMIN_PASS = "gestaojava";
-
-  window.doLogin = function () {
-    const p = document.getElementById("passInput");
-    const err = document.getElementById("loginErr");
-    if (err) err.style.display = "none";
-
-    if (!p) return;
-
-    if (p.value === window.ADMIN_PASS) {
-      localStorage.setItem("jj_admin_auth", "true");
-      if (typeof startDash === "function") startDash();
-    } else {
-      if (err) err.style.display = "block";
-      p.value = "";
-      p.focus();
-    }
-  };
-
-  window.doLogout = function () {
-    localStorage.removeItem("jj_admin_auth");
-    location.reload();
-  };
-
-  // ===== BUSCAR RESERVAS DO BANCO =====
-  async function getAll() {
-    const supabaseClient = getSupabaseClient();
-    if (!supabaseClient) return [];
-
-    const { data, error } = await supabaseClient
-      .from("reservas")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Erro ao buscar reservas:", error.message);
-      return [];
+    function showError(msg) {
+        const banner = document.getElementById('errorBanner');
+        if (banner) {
+            banner.innerHTML = '<strong>⚠️ ERRO</strong>' + msg;
+            banner.style.display = 'block';
+        }
+        const tbody = document.getElementById('reservations-body');
+        if (tbody) tbody.innerHTML = '';
     }
 
-    return data || [];
-  }
+    function initSupabase() {
+        if (!window.supabase || !window.supabase.createClient) {
+            showError('<br>Biblioteca Supabase não carregou.');
+            return false;
+        }
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            return true;
+        } catch (err) {
+            showError('<br>' + err.message);
+            return false;
+        }
+    }
 
-  // ===== MANTIDO SÓ PRA NÃO QUEBRAR =====
-  async function saveAll(a) { return true; }
+    function cleanPhoneNumber(phone) {
+        let cleaned = phone.replace(/\D/g, '');
+        if (!cleaned.startsWith('55')) cleaned = '55' + cleaned;
+        return cleaned;
+    }
 
-  // ===== UTILIDADES =====
-  function todayStr() { return new Date().toISOString().split("T")[0]; }
+    function formatPhoneDisplay(phone) {
+        const cleaned = phone.replace(/\D/g, '');
+        if (cleaned.length === 11) return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        return phone;
+    }
 
-  function esc(s) {
-    var d = document.createElement("div");
-    d.textContent = s || "";
-    return d.innerHTML;
-  }
+    function openWhatsApp(phone, nome) {
+        const cleanedPhone = cleanPhoneNumber(phone);
+        const message = encodeURIComponent('Olá ' + nome + '! Aqui é do Java Joe\'s Pizzaria e Bistrô 🍕. Estamos confirmando sua reserva.');
+        window.open('https://wa.me/' + cleanedPhone + '?text=' + message, '_blank');
+    }
 
-  function fmtDate(ds) {
-    var d = new Date(ds + "T12:00:00");
-    var names = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-    return names[d.getDay()] + " • " +
-      String(d.getDate()).padStart(2,"0") + "/" +
-      String(d.getMonth()+1).padStart(2,"0");
-  }
+    function formatDate(dateStr) {
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function isToday(dateStr) {
+        const today = new Date();
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toDateString() === today.toDateString();
+    }
+
+    async function loadReservations() {
+        if (!supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('reservas')
+                .select('*')
+                .order('data', { ascending: false })
+                .order('horario', { ascending: false });
+
+            if (error) throw error;
+
+            reservations = data || [];
+            renderReservations();
+        } catch (error) {
+            const tbody = document.getElementById('reservations-body');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#ff6b6b;">❌ Erro ao carregar</td></tr>';
+        }
+    }
+
+    async function updateStatus(id, newStatus) {
+        if (!supabaseClient) return;
+        try {
+            const { error } = await supabaseClient
+                .from('reservas')
+                .update({ status: newStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            await loadReservations();
+        } catch (error) {
+            alert('Erro: ' + error.message);
+        }
+    }
+
+    async function deleteReservation(id, nome) {
+        if (!supabaseClient) return;
+        if (!confirm('Excluir reserva de ' + nome + '?')) return;
+
+        try {
+            const { error } = await supabaseClient
+                .from('reservas')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            await loadReservations();
+        } catch (error) {
+            alert('Erro: ' + error.message);
+        }
+    }
+
+    function renderReservations() {
+        const tbody = document.getElementById('reservations-body');
+        const noReservations = document.getElementById('no-reservations');
+        if (!tbody || !noReservations) return;
+
+        let filteredReservations = reservations;
+
+        if (currentFilter === 'hoje') {
+            filteredReservations = reservations.filter(r => isToday(r.data));
+        } else if (currentFilter !== 'todas') {
+            filteredReservations = reservations.filter(r => r.status === currentFilter);
+        }
+
+        if (filteredReservations.length === 0) {
+            tbody.innerHTML = '';
+            noReservations.style.display = 'block';
+            updateStats();
+            return;
+        }
+
+        noReservations.style.display = 'none';
+
+        tbody.innerHTML = filteredReservations.map(r =>
+            '<tr><td>' + formatDate(r.data) + '</td>' +
+            '<td>' + r.horario + '</td>' +
+            '<td>' + r.nome + '</td>' +
+            '<td>' + formatPhoneDisplay(r.whatsapp) + '</td>' +
+            '<td>' + r.pessoas + '</td>' +
+            '<td><span class="status-badge status-' + r.status + '">' + r.status + '</span></td>' +
+            '<td><button onclick="deleteReservation(' + r.id + ', \'' + r.nome + '\')">Excluir</button></td></tr>'
+        ).join('');
+
+        updateStats();
+    }
+
+    function updateStats() {
+        const tr = document.getElementById('total-reservas');
+        const tp = document.getElementById('total-pendentes');
+        const tc = document.getElementById('total-confirmadas');
+        const th = document.getElementById('total-hoje');
+
+        if (tr) tr.textContent = reservations.length;
+        if (tp) tp.textContent = reservations.filter(r => r.status === 'PENDENTE').length;
+        if (tc) tc.textContent = reservations.filter(r => r.status === 'CONFIRMADA').length;
+        if (th) th.textContent = reservations.filter(r => isToday(r.data)).length;
+    }
+
+    function startAutoRefresh() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        autoRefreshInterval = setInterval(() => {
+            if (supabaseClient) loadReservations();
+        }, 10000);
+    }
+
+    window.doLogin = function() {
+        const u = document.getElementById('username');
+        const p = document.getElementById('password');
+        const e = document.getElementById('loginError');
+
+        if (!u || !p || !e) return;
+
+        if (u.value === 'admin' && p.value === 'java2025') {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+
+            if (initSupabase()) {
+                loadReservations();
+                startAutoRefresh();
+            }
+        } else {
+            e.style.display = 'block';
+        }
+    };
+
+    window.doLogout = function() {
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('adminPanel').style.display = 'none';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('loginError').style.display = 'none';
+
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    };
+
+    window.addEventListener('beforeunload', () => {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    });
 </script>
 
 function waLink(msg) {
