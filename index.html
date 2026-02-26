@@ -425,9 +425,11 @@ window.fecharModal = function() {
 console.log("\u2705 Script carregado. window.confirmarReserva =", typeof window.confirmarReserva);
 </script>
 <!-- SUPABASE (biblioteca oficial) -->
-</script>
-
+  
 <!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -435,15 +437,64 @@ const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_04HXvv9mwkH1019PEAjMBO_s13c4YOp";
 
 const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
 
-console.log("✅ Supabase conectado no cliente");
+window.confirmarReserva = async function () {
+  try {
+    const dateEl = document.getElementById("f_date");
+    const guestsEl = document.getElementById("f_guestinput");
+    const nameEl = document.getElementById("f_name");
+    const whEl = document.getElementById("f_wh");
+    const obsEl = document.getElementById("f_obs");
+    const modal = document.getElementById("successModal");
+
+    const data = dateEl.value;
+    const convidados = guestsEl.value;
+    const nome = nameEl.value;
+    const whatsapp = whEl.value;
+    const obs = obsEl.value;
+
+    if (!data || !convidados || !nome || !whatsapp) {
+      alert("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    await supabaseClient.from("reservas").insert([
+      { data, convidados, nome, whatsapp, obs }
+    ]);
+
+    modal.classList.add("on");
+    document.body.style.overflow = "hidden";
+
+    setTimeout(() => {
+      modal.classList.remove("on");
+      document.body.style.overflow = "";
+    }, 3000);
+
+    const msg = `Olá! Fiz uma reserva no Java Joe's:
+Nome: ${nome}
+Data: ${data}
+Pessoas: ${convidados}
+WhatsApp: ${whatsapp}
+Obs: ${obs}`;
+
+    window.open(
+      "https://wa.me/5521974577675?text=" + encodeURIComponent(msg),
+      "_blank"
+    );
+
+  } catch (e) {
+    console.error("Erro:", e);
+  }
+};
 </script>
 
 </body>
 </html>
+
+
 
 
 
