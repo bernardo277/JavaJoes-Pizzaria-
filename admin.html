@@ -307,12 +307,6 @@
             padding: 40px;
             color: #999;
         }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
     </style>
 </head>
 <body>
@@ -329,7 +323,7 @@
                     <label>Senha</label>
                     <input type="password" id="password" placeholder="Digite a senha" autocomplete="current-password">
                 </div>
-                <button type="button" class="btn-login" onclick="handleLogin()"()">Entrar</button>
+                <button type="submit" class="btn-login">Entrar</button>
             </form>
         </div>
     </div>
@@ -378,36 +372,54 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        console.log('[INIT] Iniciando aplicação...');
+
         const SUPABASE_URL = 'https://tmwbqmwbldbocphfnrho.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtd2JxbXdibGRib2NwaGZucmhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1OTM2OTcsImV4cCI6MjA1NjE2OTY5N30.T7RIv52l5TJNqd7_KuoEf6cXTovpSO3a2CsMUPCrjd0';
         
+        console.log('[SUPABASE] Verificando carregamento...', window.supabase ? 'OK' : 'ERRO');
+        
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('[SUPABASE] Client criado:', supabase);
+        
         let allReservations = [];
         let currentFilter = 'todas';
         let autoRefreshInterval = null;
 
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('[DOM] Página carregada');
+            
             const loginForm = document.getElementById('loginForm');
             const btnLogout = document.getElementById('btnLogout');
             const btnRefresh = document.getElementById('btnRefresh');
             const filterButtons = document.getElementById('filterButtons');
 
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                handleLogin();
-            });
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('[LOGIN] Formulário submetido');
+                    handleLogin();
+                });
+            }
 
             if (btnLogout) {
-                btnLogout.addEventListener('click', handleLogout);
+                btnLogout.addEventListener('click', function() {
+                    console.log('[LOGOUT] Botão clicado');
+                    handleLogout();
+                });
             }
 
             if (btnRefresh) {
-                btnRefresh.addEventListener('click', loadReservations);
+                btnRefresh.addEventListener('click', function() {
+                    console.log('[REFRESH] Botão clicado');
+                    loadReservations();
+                });
             }
 
             if (filterButtons) {
                 filterButtons.addEventListener('click', function(e) {
                     if (e.target.classList.contains('filter-btn')) {
+                        console.log('[FILTER] Filtro clicado:', e.target.getAttribute('data-filter'));
                         handleFilterClick(e.target);
                     }
                 });
@@ -415,22 +427,33 @@
         });
 
         function handleLogin() {
+            console.log('[LOGIN] Processando login...');
+            
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('loginError');
 
+            console.log('[LOGIN] Usuário:', username);
+
             if (username === 'admin' && password === 'java2025') {
+                console.log('[LOGIN] Credenciais corretas - abrindo painel');
+                
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
                 errorDiv.style.display = 'none';
+                
+                console.log('[LOGIN] Carregando reservas...');
                 loadReservations();
                 startAutoRefresh();
             } else {
+                console.log('[LOGIN] Credenciais incorretas');
                 errorDiv.style.display = 'block';
             }
         }
 
         function handleLogout() {
+            console.log('[LOGOUT] Deslogando...');
+            
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('adminPanel').style.display = 'none';
             document.getElementById('username').value = '';
@@ -441,24 +464,30 @@
 
         function handleFilterClick(button) {
             currentFilter = button.getAttribute('data-filter');
+            console.log('[FILTER] Filtro ativo:', currentFilter);
+            
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
             renderTable();
         }
 
         function startAutoRefresh() {
+            console.log('[AUTO-REFRESH] Iniciando...');
             stopAutoRefresh();
             autoRefreshInterval = setInterval(loadReservations, 10000);
         }
 
         function stopAutoRefresh() {
             if (autoRefreshInterval) {
+                console.log('[AUTO-REFRESH] Parando...');
                 clearInterval(autoRefreshInterval);
                 autoRefreshInterval = null;
             }
         }
 
         async function loadReservations() {
+            console.log('[RESERVAS] Buscando reservas...');
+            
             try {
                 const { data, error } = await supabase
                     .from('reservas')
@@ -466,27 +495,41 @@
                     .order('data', { ascending: false })
                     .order('horario', { ascending: false });
 
-                if (error) throw error;
+                if (error) {
+                    console.error('[RESERVAS] Erro do Supabase:', error);
+                    throw error;
+                }
 
+                console.log('[RESERVAS] Reservas carregadas:', data ? data.length : 0);
+                
                 allReservations = data || [];
                 updateStats();
                 renderTable();
             } catch (error) {
-                console.error('Erro:', error);
-                document.getElementById('tableContainer').innerHTML = '<div class="no-data">Erro ao carregar reservas</div>';
+                console.error('[RESERVAS] Erro fatal:', error);
+                document.getElementById('tableContainer').innerHTML = '<div class="no-data">❌ Erro ao carregar reservas: ' + error.message + '</div>';
             }
         }
 
         function updateStats() {
             const today = new Date().toISOString().split('T')[0];
             
-            document.getElementById('totalReservas').textContent = allReservations.length;
-            document.getElementById('totalPendentes').textContent = allReservations.filter(r => r.status === 'PENDENTE').length;
-            document.getElementById('totalConfirmadas').textContent = allReservations.filter(r => r.status === 'CONFIRMADA').length;
-            document.getElementById('totalHoje').textContent = allReservations.filter(r => r.data === today).length;
+            const total = allReservations.length;
+            const pendentes = allReservations.filter(r => r.status === 'PENDENTE').length;
+            const confirmadas = allReservations.filter(r => r.status === 'CONFIRMADA').length;
+            const hoje = allReservations.filter(r => r.data === today).length;
+            
+            console.log('[STATS] Total:', total, 'Pendentes:', pendentes, 'Confirmadas:', confirmadas, 'Hoje:', hoje);
+            
+            document.getElementById('totalReservas').textContent = total;
+            document.getElementById('totalPendentes').textContent = pendentes;
+            document.getElementById('totalConfirmadas').textContent = confirmadas;
+            document.getElementById('totalHoje').textContent = hoje;
         }
 
         function renderTable() {
+            console.log('[RENDER] Renderizando tabela...');
+            
             let filtered = allReservations;
             const today = new Date().toISOString().split('T')[0];
 
@@ -495,6 +538,8 @@
             } else if (currentFilter !== 'todas') {
                 filtered = allReservations.filter(r => r.status === currentFilter);
             }
+
+            console.log('[RENDER] Reservas filtradas:', filtered.length);
 
             if (filtered.length === 0) {
                 document.getElementById('tableContainer').innerHTML = '<div class="no-data">Nenhuma reserva encontrada</div>';
@@ -531,6 +576,8 @@
         }
 
         async function updateStatus(id, newStatus) {
+            console.log('[UPDATE] Atualizando status:', id, newStatus);
+            
             try {
                 const { error } = await supabase
                     .from('reservas')
@@ -538,14 +585,19 @@
                     .eq('id', id);
 
                 if (error) throw error;
+                
+                console.log('[UPDATE] Status atualizado com sucesso');
                 await loadReservations();
             } catch (error) {
-                alert('Erro ao atualizar status');
+                console.error('[UPDATE] Erro:', error);
+                alert('Erro ao atualizar status: ' + error.message);
             }
         }
 
         async function deleteReservation(id, nome) {
             if (!confirm('Excluir reserva de ' + nome + '?')) return;
+
+            console.log('[DELETE] Excluindo reserva:', id);
 
             try {
                 const { error } = await supabase
@@ -554,9 +606,12 @@
                     .eq('id', id);
 
                 if (error) throw error;
+                
+                console.log('[DELETE] Reserva excluída com sucesso');
                 await loadReservations();
             } catch (error) {
-                alert('Erro ao excluir reserva');
+                console.error('[DELETE] Erro:', error);
+                alert('Erro ao excluir reserva: ' + error.message);
             }
         }
 
