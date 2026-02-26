@@ -181,7 +181,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.6) sepia(1)
     <h2>Java Joe's Pizzaria e Bistrô</h2>
     <p>Painel Administrativo</p>
     <input type="password" class="login-input" id="passInput" placeholder="Senha de acesso" autocomplete="off"/>
-    <button type="button" class="login-btn" onclick="dologin()">Entrar</button>
+    <button type="button" class="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="loginErr">Senha incorreta.</div>
   </div>
 </div>
@@ -276,29 +276,31 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
-  // ===== AUTH (LOGIN) =====
+// ===== AUTH (LOGIN) =====
 
-const PASS = "gestaojava"; // gestaojava
+// senha do admin (pode trocar)
+window.ADMIN_PASS = window.ADMIN_PASS || "gestaojava";
 
-window.dologin = function () {
-  var p = $("passInput");
+// garante que não vai “quebrar” se o script rodar 2x
+window.doLogin = window.doLogin || function () {
+  var p = document.getElementById("passInput");
   if (!p) return;
 
-  if (p.value === PASS) {
+  if (p.value === window.ADMIN_PASS) {
     localStorage.setItem("jj_admin_auth", "true");
-    startDash();
+    if (typeof startDash === "function") startDash();
   } else {
-    var err = $("loginErr");
+    var err = document.getElementById("loginErr");
     if (err) err.style.display = "block";
     p.value = "";
     p.focus();
   }
-}
+};
 
-window.doLogout = function () {
+window.doLogout = window.doLogout || function () {
   localStorage.removeItem("jj_admin_auth");
   location.reload();
-}
+};
 
 // ========= BUSCAR RESERVAS DO BANCO =========
 async function getAll() {
@@ -382,22 +384,7 @@ function seedIfEmpty() {
 // ══════════════════════════
 // AUTH
 // ══════════════════════════
-window.doLogin = function() {
-  var p = $("passInput");
-  if (!p) return;
-  if (p.value === PASS) {
-    localStorage.setItem("jj_admin_auth", "true");
-    startDash();
-  } else {
-    var err = $("loginErr"); if (err) err.style.display = "block";
-    p.value = ""; p.focus();
-  }
-};
 
-window.doLogout = function() {
-  localStorage.removeItem("jj_admin_auth");
-  location.reload();
-};
 
 function startDash() {
   hide("loginPage");
