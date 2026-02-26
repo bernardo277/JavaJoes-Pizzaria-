@@ -320,15 +320,17 @@
         <div class="login-box">
             <h1>🍕 Admin Login</h1>
             <div class="login-error" id="loginError">Usuário ou senha inválidos</div>
-            <div class="form-group">
-                <label>Usuário</label>
-                <input type="text" id="username" placeholder="Digite o usuário">
-            </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="password" placeholder="Digite a senha">
-            </div>
-            <button class="btn-login" onclick="doLogin()">Entrar</button>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="username" placeholder="Digite o usuário" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="password" placeholder="Digite a senha" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login">Entrar</button>
+            </form>
         </div>
     </div>
 
@@ -336,8 +338,8 @@
         <div class="header">
             <h1>Painel Administrativo</h1>
             <div>
-                <button class="btn btn-refresh" onclick="loadReservations()">🔄 Atualizar</button>
-                <button class="btn btn-logout" onclick="doLogout()">Sair</button>
+                <button class="btn btn-refresh" id="btnRefresh">🔄 Atualizar</button>
+                <button class="btn btn-logout" id="btnLogout">Sair</button>
             </div>
         </div>
 
@@ -363,11 +365,11 @@
         <div class="content">
             <h2 style="color: #ffffff; margin-bottom: 20px;">Reservas</h2>
             
-            <div class="filters">
-                <button class="filter-btn active" onclick="setFilter('todas')">Todas</button>
-                <button class="filter-btn" onclick="setFilter('hoje')">Hoje</button>
-                <button class="filter-btn" onclick="setFilter('PENDENTE')">Pendentes</button>
-                <button class="filter-btn" onclick="setFilter('CONFIRMADA')">Confirmadas</button>
+            <div class="filters" id="filterButtons">
+                <button class="filter-btn active" data-filter="todas">Todas</button>
+                <button class="filter-btn" data-filter="hoje">Hoje</button>
+                <button class="filter-btn" data-filter="PENDENTE">Pendentes</button>
+                <button class="filter-btn" data-filter="CONFIRMADA">Confirmadas</button>
             </div>
 
             <div id="tableContainer"></div>
@@ -382,28 +384,78 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let allReservations = [];
         let currentFilter = 'todas';
+        let autoRefreshInterval = null;
 
-        function doLogin() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const btnLogout = document.getElementById('btnLogout');
+            const btnRefresh = document.getElementById('btnRefresh');
+            const filterButtons = document.getElementById('filterButtons');
+
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                handleLogin();
+            });
+
+            if (btnLogout) {
+                btnLogout.addEventListener('click', handleLogout);
+            }
+
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', loadReservations);
+            }
+
+            if (filterButtons) {
+                filterButtons.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('filter-btn')) {
+                        handleFilterClick(e.target);
+                    }
+                });
+            }
+        });
+
+        function handleLogin() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const error = document.getElementById('loginError');
+            const errorDiv = document.getElementById('loginError');
 
             if (username === 'admin' && password === 'java2025') {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
+                errorDiv.style.display = 'none';
                 loadReservations();
-                setInterval(loadReservations, 10000);
+                startAutoRefresh();
             } else {
-                error.style.display = 'block';
+                errorDiv.style.display = 'block';
             }
         }
 
-        function doLogout() {
+        function handleLogout() {
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('adminPanel').style.display = 'none';
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('loginError').style.display = 'none';
+            stopAutoRefresh();
+        }
+
+        function handleFilterClick(button) {
+            currentFilter = button.getAttribute('data-filter');
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            renderTable();
+        }
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            autoRefreshInterval = setInterval(loadReservations, 10000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
         }
 
         async function loadReservations() {
@@ -432,13 +484,6 @@
             document.getElementById('totalPendentes').textContent = allReservations.filter(r => r.status === 'PENDENTE').length;
             document.getElementById('totalConfirmadas').textContent = allReservations.filter(r => r.status === 'CONFIRMADA').length;
             document.getElementById('totalHoje').textContent = allReservations.filter(r => r.data === today).length;
-        }
-
-        function setFilter(filter) {
-            currentFilter = filter;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            renderTable();
         }
 
         function renderTable() {
@@ -476,7 +521,7 @@
                     html += '<button class="btn-sm btn-cancel" onclick="updateStatus(' + r.id + ', \'CANCELADA\')">Cancelar</button>';
                 }
                 
-                html += '<button class="btn-sm btn-delete" onclick="deleteReservation(' + r.id + ', \'' + r.nome + '\')">Excluir</button>';
+                html += '<button class="btn-sm btn-delete" onclick="deleteReservation(' + r.id + ', \'' + r.nome.replace(/'/g, "\\'") + '\')">Excluir</button>';
                 html += '</div></td>';
                 html += '</tr>';
             });
@@ -519,6 +564,8 @@
             const date = new Date(dateStr + 'T00:00:00');
             return date.toLocaleDateString('pt-BR');
         }
+
+        window.addEventListener('beforeunload', stopAutoRefresh);
     </script>
 </body>
 </html>
