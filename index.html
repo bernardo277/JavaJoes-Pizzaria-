@@ -429,9 +429,6 @@ console.log("\u2705 Script carregado. window.confirmarReserva =", typeof window.
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
 const SUPABASE_URL = "https://tmwbqmwbldbocphfnrho.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_O4HXvv9mwkH10l9PEAjMBQ_sl3c4YOp";
@@ -461,9 +458,15 @@ window.confirmarReserva = async function () {
       return;
     }
 
-    await supabaseClient.from("reservas").insert([
+    const { error } = await supabaseClient.from("reservas").insert([
       { data, convidados, nome, whatsapp, obs }
     ]);
+
+    if (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar reserva. Tente novamente.");
+      return;
+    }
 
     modal.classList.add("on");
     document.body.style.overflow = "hidden";
@@ -486,13 +489,15 @@ Obs: ${obs}`;
     );
 
   } catch (e) {
-    console.error("Erro:", e);
+    console.error("Erro inesperado:", e);
+    alert("Erro inesperado. Tente novamente.");
   }
 };
 </script>
 
 </body>
 </html>
+
 
 
 
