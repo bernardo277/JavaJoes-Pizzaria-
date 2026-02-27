@@ -458,15 +458,17 @@ window.confirmarReserva = async function () {
       return;
     }
 
-    const { error } = await supabaseClient.from("reservas").insert([
-      { data, convidados, nome, whatsapp, obs }
-    ]);
+   const pessoas = parseInt(convidados, 10);
 
-    if (error) {
-      console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar reserva. Tente novamente.");
-      return;
-    }
+const { error } = await supabaseClient.from("reservas").insert([
+  { data, pessoas, nome, whatsapp, obs }
+]);
+
+if (error) {
+  console.error(error);
+  alert("Erro ao salvar reserva: " + error.message);
+  return;
+}
 
     modal.classList.add("on");
     document.body.style.overflow = "hidden";
@@ -497,6 +499,7 @@ Obs: ${obs}`;
 
 </body>
 </html>
+
 
 
 
