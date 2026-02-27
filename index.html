@@ -450,7 +450,8 @@ window.confirmarReserva = async function () {
     const convidados = guestsEl.value;
     const nome = nameEl.value;
     const whatsapp = whEl.value;
-  
+    const obs = "";
+    
     if (!data || !convidados || !nome || !whatsapp) {
       alert("Preencha todos os campos obrigatórios.");
       return;
@@ -476,13 +477,14 @@ if (error) {
       document.body.style.overflow = "";
     }, 3000);
 
-    const msg = `Olá! Fiz uma reserva no Java Joe's:
+   const msg = `Olá! Fiz uma reserva no Java Joe's:
+
 Nome: ${nome}
 Data: ${data}
 Pessoas: ${convidados}
 WhatsApp: ${whatsapp}
 Obs: ${obs}`;
-
+    
     window.open(
       "https://wa.me/5521974577675?text=" + encodeURIComponent(msg),
       "_blank"
@@ -496,6 +498,7 @@ Obs: ${obs}`;
 </script>
 </body>
 </html>
+
 
 
 
