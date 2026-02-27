@@ -283,7 +283,6 @@ window.confirmarReserva = function() {
   var btnArrow = document.getElementById("btnArrow");
   var modal = document.getElementById("successModal");
   var formErr = document.getElementById("formError");
-
   // Safety: check all critical elements exist
   if (!dateEl) { console.log("ERRO: f_date not found"); return; }
   if (!guestsEl) { console.log("ERRO: f_guests not found"); return; }
@@ -302,14 +301,14 @@ window.confirmarReserva = function() {
   var guestsVal = parseInt(guestsEl.value);
   var nameVal = nameEl.value.trim();
   var whRaw = whEl.value.replace(/\D/g, "");
+  var obs = obsEl ? obsEl.value : "";
 
   if (!dateVal) {
     errors.push("Selecione a data da reserva.");
     setFieldErr("fgDate");
   }
-  if (!guestsVal || guestsVal < 1 || guestsVal > 100) {
-    errors.push("Informe o n\u00famero de pessoas (1-100).");
-    setFieldErr("fgGuests");
+  if (!guestsVal || guestsVal < 1 || guestsVal > 60) {
+    errors.push("Informe o número de pessoas (1-60).");
   }
   if (nameVal.length < 2) {
     errors.push("Informe seu nome completo.");
@@ -498,6 +497,7 @@ Obs: ${obs}`;
 
 </body>
 </html>
+
 
 
 
